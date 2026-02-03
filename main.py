@@ -2,6 +2,10 @@ import pandas as pd
 import os
 from datetime import datetime
 import logging
+# cargo las funciones en el archivo loader dentro de src
+# para eso necesito el archivo __init__.py en src
+from src.loader import cargar_dataset 
+from src.features import feature_engineering_lag
 
 # Crear carpeta logs
 os.makedirs("logs", exist_ok=True)
@@ -23,27 +27,23 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Función para cargar el dataset
-def cargar_dataset(path: str) -> pd.DataFrame | None:
-    logger.info(f"Cargando dataset desde {path}")
-    try:
-        df = pd.read_csv(path)
-        logger.info(f"Dataset cargado correctamente con {df.shape[0]} filas y {df.shape[1]} columnas")
-        return df
-    except Exception as e:
-        logger.exception(f"Error al cargar el dataset {path}: {e}")
-        raise
-
 # Función principal
 def main():
-
+    # Cargar datos 
     logger.info("Inicio de ejecución")
-
+    os.makedirs("data", exist_ok=True)
     path = "data/competencia_01_crudo_filtrado.csv"
-
     df = cargar_dataset(path)
 
-    logger.debug(f"Primeras filas:\n{df.head()}")
+    # Feature engineering
+    columnas = ["ctrx_quarter", "mrentabilidad"]
+    cant_lag = 2
+    df = feature_engineering_lag(df, columnas=columnas, cant_lag=cant_lag)
+
+    # Guardar los datos 
+    path = "data/competencia_01_crudo_filtrado_lag.csv"
+    df.to_csv(path, index=False)
+    logger.info(f"Datos guardados en {path}")
 
     logger.info(f"Fin de ejecución. Logs en {ruta_log}")
 
