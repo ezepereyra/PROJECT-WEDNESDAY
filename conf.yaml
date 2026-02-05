@@ -1,7 +1,7 @@
 STUDY_NAME : "Wednesday"
 
 competencia01:
-  DATA_PATH: "../data/competencia_01_crudo_filtrado.csv"
+  DATA_PATH: "data/competencia_01_crudo_filtrado.csv"
   SEMILLA: [100001, 200002, 300003, 400004, 500005]
   MES_TRAIN: "202102"
   MES_VALIDACION: "202103"

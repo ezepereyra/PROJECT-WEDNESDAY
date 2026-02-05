@@ -6,6 +6,7 @@ import logging
 # para eso necesito el archivo __init__.py en src
 from src.loader import cargar_dataset, convertir_clase_ternaria_a_target, crear_clase_ternaria
 from src.features import feature_engineering_lag
+from src.optimization import optimizar
 from src.conf import *
 
 # Crear carpeta logs
@@ -28,13 +29,23 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Manejo de configuración en YAML
+logger.info("Configuración cargada desde YAML")
+logger.info(f"STUDY_NAME: {STUDY_NAME}")
+logger.info(f"SEMILLA: {SEMILLA}")
+logger.info(f"DATA_PATH: {DATA_PATH}")
+logger.info(f"MES_TRAIN: {MES_TRAIN}")
+logger.info(f"MES_VALIDACION: {MES_VALIDACION}")
+logger.info(f"MES_TEST: {MES_TEST}")
+logger.info(f"GANANCIA_ACIERTO: {GANANCIA_ACIERTO}")
+logger.info(f"COSTO_ESTIMULO: {COSTO_ESTIMULO}")
+
 # Función principal
 def main():
     # Cargar datos 
     logger.info("Inicio de ejecución")
     os.makedirs("data", exist_ok=True)
-    path = "data/competencia_01_crudo_filtrado.csv"
-    df = cargar_dataset(path)
+    df = cargar_dataset(DATA_PATH)
 
     # Crear clase ternaria
     df = crear_clase_ternaria(df)
@@ -48,22 +59,28 @@ def main():
     # Convertir clase ternaria a target binaria
     df_fe = convertir_clase_ternaria_a_target(df_fe)
 
+    """
     # Guardar los datos 
     path = "data/competencia_01_crudo_filtrado_lag_binaria.csv"
     df_fe.to_csv(path, index=False)
     logger.info(f"Datos guardados en {path}")
+    """
 
-    logger.info(f"Fin de ejecución. Logs en {ruta_log}")
+    # Ejecutar la optimización de hiperparámetros
+    study = optimizar(df_fe, n_trials=100)
 
+    # Análisis adicional
+    logger.info("===ANÁLISIS DE RESULTADOS===")
+    trials_df = study.trials_dataframe()
+    if len(trials_df) > 0:
+        top_5 = trials_df.nlargest(5, "value")
+        logger.info("Top 5 mejores trials:")
+        for idx, trial in top_5.iterrows():
+            logger.info(f"Trial {trial['number']}: {trial['value']:,0f}")
 
-    print("SEMILLA:", SEMILLA)
-    print("DATA_PATH:", DATA_PATH)
-    print("MES_TRAIN:", MES_TRAIN)
-    print("MES_VALIDACION:", MES_VALIDACION)
-    print("MES_TEST:", MES_TEST)
-    print("GANANCIA_ACIERTO:", GANANCIA_ACIERTO)
-    print("COSTO_ESTIMULO:", COSTO_ESTIMULO)
-
+    logger.info("===OPTIMIZACIÓN COMPLETADA===")
+    
+    logger.info(f"Fin de ejecución. Revisar logs para más detalle. {nombre_log}")
 
 if __name__ == "__main__":
     main()

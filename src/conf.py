@@ -15,7 +15,10 @@ try:
 
         # Valores por defecto ? 
         STUDY_NAME = _cfgGeneral.get("STUDY_NAME","Wednesday")
-        DATA_PATH = _cfg.get("DATA_PATH","../data/competencia.csv")
+        DATA_PATH = os.path.join(
+            BASE_DIR,
+            _cfg.get("DATA_PATH", "data/competencia.csv")
+        )
         SEMILLA = _cfg.get("SEMILLA",[42])
         MES_TRAIN = _cfg.get("MES_TRAIN","202102")
         MES_VALIDACION = _cfg.get("MES_VALIDACION","202103")
