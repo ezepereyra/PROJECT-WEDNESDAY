@@ -76,7 +76,7 @@ def main():
         top_5 = trials_df.nlargest(5, "value")
         logger.info("Top 5 mejores trials:")
         for idx, trial in top_5.iterrows():
-            logger.info(f"Trial {trial['number']}: {trial['value']:,0f}")
+            logger.info(f"Trial {trial['number']}: {trial['value']:,.0f}")
 
     logger.info("===OPTIMIZACIÓN COMPLETADA===")
     

@@ -38,7 +38,7 @@ def objetivo_ganancia(trial,df) -> float:
         "verbose": -1
     }
 
-    df_train = df[df["foto_mes"] == MES_TRAIN]
+    df_train = df[df["foto_mes"].isin(MES_TRAIN)]
     df_val = df[df["foto_mes"] == MES_VALIDACION]
 
     X_train = df_train.drop(columns=["clase_ternaria"])
