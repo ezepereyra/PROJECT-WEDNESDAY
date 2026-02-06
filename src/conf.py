@@ -15,6 +15,7 @@ try:
 
         # Valores por defecto ? 
         STUDY_NAME = _cfgGeneral.get("STUDY_NAME","Wednesday")
+        PARAMETROS_LGB = _cfgGeneral["parametros_lgb"]
         DATA_PATH = os.path.join(
             BASE_DIR,
             _cfg.get("DATA_PATH", "data/competencia.csv")

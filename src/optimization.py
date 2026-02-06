@@ -32,32 +32,58 @@ def objetivo_ganancia(trial,df) -> float:
         "objective": "binary",
         "boosting_type": "gbdt",
         "metric": "None",
-        "num_leaves": trial.suggest_int("num_leaves", 10, 100),
-        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3),
-        "random_state": SEMILLA[0],
-        "verbose": -1
+        "num_leaves": trial.suggest_int("num_leaves", PARAMETROS_LGB['num_leaves'][0], PARAMETROS_LGB['num_leaves'][1]),
+        "learning_rate": trial.suggest_float("learning_rate", PARAMETROS_LGB['learning_rate'][0], PARAMETROS_LGB['learning_rate'][1]),
+        "feature_fraction": trial.suggest_float("feature_fraction", PARAMETROS_LGB['feature_fraction'][0], PARAMETROS_LGB['feature_fraction'][1]),
+        "bagging_fraction": trial.suggest_float("bagging_fraction", PARAMETROS_LGB['bagging_fraction'][0], PARAMETROS_LGB['bagging_fraction'][1]),
+        "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", PARAMETROS_LGB['min_data_in_leaf'][0], PARAMETROS_LGB['min_data_in_leaf'][1]),
+        "max_depth": trial.suggest_int("max_depth", PARAMETROS_LGB['max_depth'][0], PARAMETROS_LGB['max_depth'][1]),
+        "lambda_l1": trial.suggest_float("lambda_l1", PARAMETROS_LGB['lambda_l1'][0], PARAMETROS_LGB['lambda_l1'][1]),
+        "lambda_l2": trial.suggest_float("lambda_l2", PARAMETROS_LGB['lambda_l2'][0], PARAMETROS_LGB['lambda_l2'][1]),
+        "min_gain_to_split": 0.0,
+        "verbose": -1,
+        "silent": True,
+        "bin": 31,
+        "random_state": SEMILLA[0]
     }
 
-    df_train = df[df["foto_mes"].isin(MES_TRAIN)]
+    # Preparar datos usando conf YAML
+    if isinstance(MES_TRAIN, list):
+        df_train = df[df["foto_mes"].isin(MES_TRAIN)]
+    else:
+        df_train = df[df["foto_mes"] == MES_TRAIN]
+    
     df_val = df[df["foto_mes"] == MES_VALIDACION]
 
     X_train = df_train.drop(columns=["clase_ternaria"])
-    y_train = df_train["clase_ternaria"]
+    y_train = df_train["clase_ternaria"].values
 
     X_val = df_val.drop(columns=["clase_ternaria"])
-    y_val = df_val["clase_ternaria"]
+    y_val = df_val["clase_ternaria"].values
 
-    train_data = lgb.Dataset(X_train, y_train)
+    train_data = lgb.Dataset(X_train, label=y_train)
+    val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
 
-    model = lgb.train(params, train_data)
+    model = lgb.train(
+        params, 
+        train_data, 
+        valid_sets=[val_data],
+        feval = ganancia_lgb_binary, # Función de ganancia personalizada
+        callbacks=[lgb.early_stopping(stopping_rounds=50), lgb.log_evaluation(0)]
+    )
 
-    y_pred = model.predict(X_val)
+    # Predecir y calcular ganancia
+    y_pred_proba = model.predict(X_val)
+    y_pred_binary = (y_pred_proba >= 0.025).astype(int)
 
-    y_pred_binary = (y_pred >= 0.025).astype(int)
+    ganancia_total = calcular_ganancia(y_val, y_pred_binary)
 
-    ganancia = calcular_ganancia(y_val, y_pred_binary)
+    # Guardar cada iteración en JSON 
+    guardar_iteracion(trial, ganancia_total)
 
-    return ganancia
+    logger.info(f"Trial {trial.number}: Ganancia = {ganancia_total}")
+
+    return ganancia_total
 
 
 def guardar_iteracion(trial, ganancia, archivo_base=None):
@@ -110,7 +136,7 @@ def guardar_iteracion(trial, ganancia, archivo_base=None):
         json.dump(datos_existentes, f, indent=2)
 
     logger.info(f"Iteración {trial.number} guardada en {archivo}")
-    logger.info(f"Ganancia: {ganancia:,0f}" + "---" + f"Parámetros:{trial.params}")
+    logger.info(f"Ganancia: {ganancia:,}" + "---" + f"Parámetros:{trial.params}")
     
 
 from src.conf import STUDY_NAME
@@ -139,11 +165,16 @@ def optimizar(df: pd.DataFrame, n_trials: int, study_name: str = None) -> optuna
     logger.info(f"Iniciando optimización con {n_trials} trials")
     logger.info(f"Configuración: TRIAN = {MES_TRAIN}, VALID = {MES_VALIDACION}, SEMILLA = {SEMILLA}")
 
-    study = optuna.create_study(direction="maximize")
+    study = optuna.create_study(direction="maximize", study_name=study_name)
 
+    # Función objetivo parcial con datos 
+    objetive_with_data = lambda trial : objetivo_ganancia(trial, df)
+
+    # Ejecutar optimización
     study.optimize(
-        lambda trial: objetivo_ganancia(trial, df),
-        n_trials=n_trials
+        objetive_with_data,
+        n_trials=n_trials,
+        show_progress_bar=True
     )
 
     # Resultados
