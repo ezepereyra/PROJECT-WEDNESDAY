@@ -21,11 +21,13 @@ try:
             _cfg.get("DATA_PATH", "data/competencia.csv")
         )
         SEMILLA = _cfg.get("SEMILLA",[42])
-        MES_TRAIN = _cfg.get("MES_TRAIN","202102")
-        MES_VALIDACION = _cfg.get("MES_VALIDACION","202103")
-        MES_TEST = _cfg.get("MES_TEST","202104")
+        MES_TRAIN = _cfg.get("MES_TRAIN",[])
+        MES_VALIDACION = _cfg.get("MES_VALIDACION",[])
+        MES_TEST = _cfg.get("MES_TEST",[])
         GANANCIA_ACIERTO = _cfg.get("GANANCIA_ACIERTO",None)
         COSTO_ESTIMULO = _cfg.get("COSTO_ESTIMULO",None)
+        FINAL_TRAIN = _cfg.get("FINAL_TRAIN", [])
+        FINAL_PREDICT = _cfg.get("FINAL_PREDICT",[])
 
 except Exception as e:
     logger.exception(f"Error al cargar el archivo de configuración {PATH_CONFIG}: {e}")

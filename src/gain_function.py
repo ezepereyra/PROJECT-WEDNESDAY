@@ -31,10 +31,10 @@ def calcular_ganancia(y_true, y_pred):
         ((y_true == 1) & (y_pred == 1)) * GANANCIA_ACIERTO +
         ((y_true == 0) & (y_pred == 1)) * (-COSTO_ESTIMULO)
     )
-
+    """
     logger.debug(f"Ganancia total calculada: {ganancia_total}"
         f"(GANANCIA_ACIERTO: {GANANCIA_ACIERTO}, COSTO_ESTIMULO: {COSTO_ESTIMULO})")
-    
+    """
     return ganancia_total
 
 def ganancia_lgb_binary(y_pred, y_true):

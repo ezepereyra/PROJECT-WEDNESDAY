@@ -6,7 +6,9 @@ import logging
 # para eso necesito el archivo __init__.py en src
 from src.loader import cargar_dataset, convertir_clase_ternaria_a_target, crear_clase_ternaria
 from src.features import feature_engineering_lag
-from src.optimization import optimizar
+from src.optimization import optimizar, evaluar_en_test
+from src.best_params import cargar_los_mejores_hiperparametros
+from src.final_training import preparar_datos_entrenamiento_final, entrenar_modelo_final, generar_predicciones_finales, guardar_predicciones_finales, guardar_modelo_final
 from src.conf import *
 
 # Crear carpeta logs
@@ -79,8 +81,29 @@ def main():
             logger.info(f"Trial {trial['number']}: {trial['value']:,.0f}")
 
     logger.info("===OPTIMIZACIÓN COMPLETADA===")
+    logger.info(f"Mejores hiperparámetros: {study.best_params}")
+    logger.info(f"Ganancia en validación: {study.best_value:,.0f}")
+    logger.info("===EVALUACIÓN EN EL CONJUNTO DE TEST===")
+    mejores_params = cargar_los_mejores_hiperparametros()
+    logger.info(f"Mejores hiperparámetros cargados: {mejores_params}")
+    ganancia_test = evaluar_en_test(df_fe, mejores_params)
+    logger.info(f"Ganancia en test: {ganancia_test:,.0f}")
+
+    # Entrenar modelo final
+    X_train, y_train, X_predict, clientes_predict = preparar_datos_entrenamiento_final(df_fe)
+    modelo = entrenar_modelo_final(X_train, y_train, mejores_params)
+
+    # Guardar el modelo entrenado (podría ser útil para futuras predicciones) como .txt
+    guardar_modelo_final(modelo)
+
+    # Generar predicciones finales
+    predicciones = generar_predicciones_finales(modelo, X_predict, clientes_predict)
+
+    # Guardar predicciones finales
+    salida = guardar_predicciones_finales(predicciones)
+    logger.info(f"Predicciones guardadas en {salida}")
     
-    logger.info(f"Fin de ejecución. Revisar logs para más detalle. {nombre_log}")
+    logger.info(f"=== FIN DE EJECUCIÓN ===. Revisar logs para más detalle. {nombre_log}")
 
 if __name__ == "__main__":
     main()

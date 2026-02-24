@@ -53,7 +53,7 @@ def objetivo_ganancia(trial,df) -> float:
     else:
         df_train = df[df["foto_mes"] == MES_TRAIN]
     
-    df_val = df[df["foto_mes"] == MES_VALIDACION]
+    df_val = df[df["foto_mes"].isin(MES_VALIDACION)]
 
     X_train = df_train.drop(columns=["clase_ternaria"])
     y_train = df_train["clase_ternaria"].values
@@ -182,4 +182,60 @@ def optimizar(df: pd.DataFrame, n_trials: int, study_name: str = None) -> optuna
     logger.info(f"Mejores hiperparámetros: {study.best_params}")
     
     return study
+    
+def evaluar_en_test(df: pd.DataFrame, mejores_params: dict) -> float:
+    """
+    Evalúa el modelo con los mejores hiperparámetros en el conjunto de datos test. 
+    Sólo calcula la ganancia, sin usar sklearn. 
+
+    Args: 
+        df: DataFrame con los datos
+        mejores_params: Diccionario con los mejores hiperparámetros encontrados por Optuna
+    
+    Returns:
+        float: Ganancia total    
+    """
+
+    logger.info("===EVALUACIÓN EN EL CONJUNTO DE TEST===")
+    logger.info(f"Período de test: {MES_TEST}")
+
+    # Preparar datos de entrenamiento (TRAIN + VALIDACION)
+    if isinstance(MES_TRAIN,list):
+        periodos_entrenamiento = MES_TRAIN + [MES_VALIDACION]
+    else:
+        periodos_entrenamiento = [MES_TRAIN, MES_VALIDACION]
+
+    # Generar df de train y de test
+    df_train = df[df["foto_mes"].isin(periodos_entrenamiento)]
+    df_test = df[df["foto_mes"].isin(MES_TEST)]
+    
+    #Entrenar modelo con mejores hiperparámetros
+    params = mejores_params
+    params["random_state"] = SEMILLA[0]
+    
+    X_train = df_train.drop(columns=["clase_ternaria"])
+    y_train = df_train["clase_ternaria"].values
+    
+    train_data = lgb.Dataset(X_train, label=y_train)
+    
+    model = lgb.train(
+        params,
+        train_data,
+        num_boost_round=mejores_params.get("num_boost_round", 1000),
+        feval=ganancia_lgb_binary
+    )
+
+    # Predecir y calcular ganancia
+    X_test = df_test.drop(columns=["clase_ternaria"])
+    y_pred_proba = model.predict(X_test)
+    y_pred_binary = (y_pred_proba >= 0.025).astype(int)
+    
+    ganancia_total = calcular_ganancia(df_test["clase_ternaria"], y_pred_binary)
+    
+    logger.info(f"Ganancia total: {ganancia_total:,.0f}")
+    
+    return ganancia_total
+    
+
+
     
